@@ -1,35 +1,55 @@
 const express = require("express");
-const cors = require('cors');
-const cookieParser = require('cookie-parser');
 require('dotenv').config()
 
-const operatorsRouter = require("./routes/operators");
-const errorMiddleware = require('./middleware/error-middleware');
-const userRouter = require('./routes/users');
+const { createServer } = require('http')
+const { Server } = require('socket.io')
+
+const registerUserHandler = require('./socketHandlers/user-handler')
+const registerOperatorHandler = require('./socketHandlers/operator-handler')
 const authMiddleware = require('./middleware/auth-middleware')
 
+const port = normalizePort(process.env.PORT || '5000');
 const app = express();
+const httpServer = createServer(app)
+const io = new Server(httpServer, {
+    cors: {
+        origin: process.env.CLIENT_URL,
+        credentials: true
+    }
+})
 
-app.use(express.json());
-app.use(cookieParser());
-app.use(cors({
-    credentials: true,
-    origin: process.env.CLIENT_URL
-}))
+const onConnection = (socket) =>
+{
+    registerUserHandler(io, socket)
+    console.log("connected")
+}
+
+const onPrivateConnection = (socket) =>{
+    console.log("private connected")
+    registerOperatorHandler(io, socket)
+}
+
+io.of("/private/").use(authMiddleware)
+io.on("connection", onConnection)
+io.of("/private/").on("connection", onPrivateConnection)
+
+httpServer.listen(port, onListening)
+
+function onListening() {
+    console.log('Listening on ' + port);
+}
 
 
-app.use('/api/operators',authMiddleware, operatorsRouter);
-//app.use('/api/operators', operatorsRouter);
-app.use('/api/users', userRouter);
+function normalizePort(val) {
+    const port = parseInt(val, 10);
 
-app.use(errorMiddleware)
+    if (isNaN(port)) {
+        return val;
+    }
 
-app.get("/api", (req, res) => {
-    console.log('ssss');
-    res.json({ "names": ["ex", "sah", "th"] });
-});
+    if (port >= 0) {
+        return port;
+    }
 
-
-
-
-app.listen(5000, () => { console.log("started on 5000") });
+    return false;
+}

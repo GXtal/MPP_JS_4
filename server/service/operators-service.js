@@ -36,8 +36,6 @@ class OperatorsService {
 
     async get(id, owner) {
         let index = this.operators.findIndex((x) => { return x.id == id });
-        console.log("get");
-        console.log(index);
         if (this.operators[index].owner == owner) {
             return this.operators[index];
         }
@@ -74,11 +72,8 @@ class OperatorsService {
     }
 
     async delete(id, owner) {
-        console.log(id);
         let index = this.operators.findIndex((x) => { return x.id == id });
-        console.log(index);
         this.operators.splice(index, 1);
-        console.log(this.operators);
         this.operatorsjson = JSON.stringify(this.operators);
         fs.writeFileSync(operatorsDB, this.operatorsjson);
         return this.getAll(owner);

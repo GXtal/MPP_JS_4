@@ -1,26 +1,21 @@
 const ApiError = require('./errors')
 const tokenService = require('../service/token-service')
 
-module.exports = function (req, res, next){
+module.exports = function (socket, next){
     try {
-        const authorizationHeader = req.headers.authorization
-        if(!authorizationHeader){
-            return next(ApiError.UnauthorizedError())
+        const token = socket.handshake.auth.token
+        if(!token){
+            throw ApiError.UnauthorizedError()
         }
 
-        const accessToken = authorizationHeader.split(' ')[1]
-        if(!accessToken){
-            return next(ApiError.UnauthorizedError())
-        }
-
-        const userData = tokenService.validationAccessToken(accessToken)
+        const userData = tokenService.validationAccessToken(token)
         if(!userData){
-            return next(ApiError.UnauthorizedError())
+            throw ApiError.UnauthorizedError()
         }
 
-        req.user = userData
         next();
     }catch (e) {
-        return next(ApiError.UnauthorizedError())
+        e.data = {status: e.status}
+        next(e)
     }
 }
